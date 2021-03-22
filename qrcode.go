@@ -50,18 +50,19 @@ package qrcode
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/skip2/go-qrcode/bitset"
+	"github.com/skip2/go-qrcode/reedsolomon"
 	"image"
 	"image/color"
 	"image/png"
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
-
-	bitset "github.com/skip2/go-qrcode/bitset"
-	reedsolomon "github.com/skip2/go-qrcode/reedsolomon"
 )
 
 // Encode a QR Code and return a raw PNG image.
@@ -81,6 +82,21 @@ func Encode(content string, level RecoveryLevel, size int) ([]byte, error) {
 	}
 
 	return q.PNG(size)
+}
+
+func Encode2(content string, level RecoveryLevel, size int) (string, error) {
+	var q *QRCode
+
+	q, err := New(content, level)
+
+
+	q.BackgroundColor = color.White
+	q.ForegroundColor = color.RGBA{100, 200, 200, 0xff}
+	if err != nil {
+		return "", err
+	}
+
+	return q.PNG2(size)
 }
 
 // WriteFile encodes, then writes a QR Code to the given filename in PNG format.
@@ -336,6 +352,44 @@ func (q *QRCode) Image(size int) image.Image {
 // size is both the image width and height in pixels. If size is too small then
 // a larger image is silently returned. Negative values for size cause a
 // variable sized image to be returned: See the documentation for Image().
+func encode(bin []byte) []byte {
+	e64 := base64.StdEncoding
+
+	maxEncLen := e64.EncodedLen(len(bin))
+	encBuf := make([]byte, maxEncLen)
+
+	e64.Encode(encBuf, bin)
+	return encBuf
+}
+func FromBuffer(buf bytes.Buffer) string {
+	enc := encode(buf.Bytes())
+	mime := http.DetectContentType(buf.Bytes())
+
+	return format(enc, mime)
+}
+func format(enc []byte, mime string) string {
+	switch mime {
+	case "image/gif", "image/jpeg", "image/pjpeg", "image/png", "image/tiff":
+		return fmt.Sprintf("data:%s;base64,%s", mime, enc)
+	default:
+	}
+
+	return fmt.Sprintf("data:image/png;base64,%s", enc)
+}
+func (q *QRCode) PNG2(size int) (string, error) {
+	img := q.Image(size)
+
+	encoder := png.Encoder{CompressionLevel: png.BestCompression}
+	var b bytes.Buffer
+	err := encoder.Encode(&b, img)
+	if err != nil {
+		return "", err
+	}
+	imgstr := FromBuffer(b)
+	return imgstr, nil
+}
+
+
 func (q *QRCode) PNG(size int) ([]byte, error) {
 	img := q.Image(size)
 
