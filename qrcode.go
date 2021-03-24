@@ -76,7 +76,8 @@ func Encode(content string, level RecoveryLevel, size int) ([]byte, error) {
 	var q *QRCode
 
 	q, err := New(content, level)
-
+	q.BackgroundColor = color.White
+	q.ForegroundColor = color.RGBA{255, 4, 145, 0xff}
 	if err != nil {
 		return nil, err
 	}
