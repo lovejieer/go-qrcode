@@ -100,6 +100,23 @@ func Encode2(content string, level RecoveryLevel, size int) (string, error) {
 	return q.PNG2(size)
 }
 
+func Encode3(content string, level RecoveryLevel, size int,background,
+	foreground color.Color) ([]byte, error) {
+	var q *QRCode
+
+	q, err := New(content, level)
+
+	q.BackgroundColor = background
+	q.ForegroundColor = foreground
+
+	if err != nil {
+		return nil, err
+	}
+
+	return q.PNG(size)
+}
+
+
 // WriteFile encodes, then writes a QR Code to the given filename in PNG format.
 //
 // size is both the image width and height in pixels. If size is too small then
